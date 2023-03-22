@@ -1,0 +1,93 @@
+<textarea autofocus aria-label="Type message here" placeholder="Type message here" class="form-control" id="note"
+    rows="5"></textarea>
+<div class="mt-2 mb-2">
+    <input type="radio" name="message-type" value="onread" checked onchange="change(event)" aria-checked="true"
+        aria-label="Destroy after being read" /> Destroy after being read <br />
+    <input id="ttl" type="radio" name="message-type" value="aftertime" onchange="change(event)" style="color:aliceblue;"/> Destroy after
+    <input class="time-input" id="ttl-number" type="number" style="width: 40px" min="0" disabled />
+    <select class="time-input" id="ttl-unit" disabled aria-label="Destroy after minutes, hours, days">
+        <option value="null">Select One</option>
+        <option value="60">Minutes</option>
+        <option value="3600">Hours</option>
+        <option value="84600">Days</options>
+    </select>
+</div>
+<button class="btn btn-primary form-control" onclick="submit()" aria-label="Submit">Submit</button>
+<button class="btn btn-secondary form-control" style="margin-top:8px;" onclick="restart()"
+    aria-label="Clear">Clear</button>
+
+{{#if deleteStaleMessages}}
+    <div class="delete-stale-messages">All messages will be deleted if not read after {{deleteStaleMessagesDays}} days.</div>
+{{/if}}
+
+<div id="results" style="margin-top:10px;text-align:center;display:none;">
+    <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <span class="input-group-text">URL:</span>
+        </div>
+        <input type="text" class="form-control" id="url" aria-label="Generated link to share" />
+        <div class="input-group-append">
+            <span class="input-group-text" onclick="copyUrl()" id="copy" style="cursor:pointer;">Copy</span>
+        </div>
+    </div>
+</div>
+
+<!--<p id="infotext">Info <br><span id="desctext">StealthyNotes is a simple web application which allows you to make notes with military-grade encryption that get destroyed after being read or after a specific time that you can set.</span></br></p>-->
+
+<script>
+    async function submit() {
+        if (document.getElementById('ttl').checked && (document.getElementById('ttl-unit').value === 'null' || document.getElementById('ttl-number').value === '')) {
+            alert('You must enter a time and unit');
+            return;
+        }
+        const note = document.getElementById('note').value;
+        let ttl = 0;
+        if (document.getElementById('ttl').checked) {
+            ttl = document.getElementById('ttl-number').value * document.getElementById('ttl-unit').value;
+        }
+        const { securityKey, iv } = window.hush.generateIVAndSecurityKey();
+        const encryptedNote = window.hush.encrypt(note, iv, securityKey);
+        console.log(encryptedNote);
+        const opts = { note: encryptedNote, ttl, securityKey };
+        const response = await fetch('/create', {
+            method: 'POST',
+            body: JSON.stringify(opts),
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            })
+        });
+        const urlInput = document.getElementById('url');
+        urlInput.value = `${location.origin}/read/${securityKey}/${iv}`;
+        document.getElementById('results').style.display = 'block';
+        urlInput.focus();
+        document.getElementById('note').value = '';
+    }
+
+    function copyUrl() {
+        document.getElementById('url').select();
+        document.execCommand('copy');
+        document.getElementById('copy').innerText = 'Copied!';
+        setTimeout(() => document.getElementById('copy').innerText = 'Copy', 2000)
+    }
+
+    function restart() {
+        document.getElementById('note').value = '';
+        document.getElementById('url').value = '';
+        document.getElementById('results').style.display = 'none';
+        const textbox = document.getElementById('note');
+        textbox.focus();
+    }
+
+    function change(event) {
+        if (event.target.value === 'aftertime') {
+            document.querySelectorAll('.time-input').forEach(input => input.disabled = false);
+            document.getElementById('ttl-unit').value = null;
+        } else {
+            document.querySelectorAll('.time-input').forEach(input => {
+                input.value = null;
+                input.disabled = true;
+            });
+        }
+        document.getElementById('results').style.display = 'none';
+    }
+</script>
