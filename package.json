@@ -1,8 +1,8 @@
 {
-  "name": "stealthynotes",
+  "name": "stealthnotes",
   "private": true,
   "version": "4.1.1",
-  "description": "a privnote-like service with a REST API for sending one-time-use messages via unique URLs",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
